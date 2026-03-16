@@ -91,16 +91,12 @@ inline std::vector<double> prolongation(const std::vector<double>& e_coarse, int
                                                     e_coarse[(i+1)*(ny_c+1) + j] + e_coarse[(i+1)*(ny_c+1) + j+1]) / 4.0;
         }
     }
-
     return e_fine;
 }
 
 inline void solve_coarse(Grid2D& coarse) {
     std::fill(coarse.u.begin(), coarse.u.end(), 0.0);
-
-    // descomentar para bigrid
-    // for (int k = 0; k < 1000; k++)
-        gauss_seidel(coarse);
+    gauss_seidel_rb(coarse);
 }
 
 #endif
