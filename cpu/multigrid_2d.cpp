@@ -147,9 +147,6 @@ int main(int argc, char* argv[]) {
     auto t_end = std::chrono::high_resolution_clock::now();
     double elapsed_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
 
-    if (k > max_vcycles)
-        std::cout << "\nAVISO: nao convergiu em " << max_vcycles << " v-cycles.\n";
-
     // calcula erro contra solucao analitica
     double max_err = 0.0;
     for (int i = 1; i < grid.nx; i++) {
