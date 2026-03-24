@@ -17,7 +17,7 @@ void print_usage() {
               << "  --smoother  Metodo de suavizacao:\n"
               << "                jacobi, jacobi_amortecido, gauss_seidel,\n"
               << "                gauss_seidel_rb, sor\n"
-              << "  --tol       Tolerancia para convergencia (default: 1e-10)\n"
+              << "  --tol       Tolerancia para convergencia (default: 1e-9)\n"
               << "\n"
               << "Exemplo:\n"
               << "  ./multigrid_2d --n 256 --smoother gauss_seidel_rb --tol 1e-8\n";
@@ -27,8 +27,8 @@ int main(int argc, char* argv[]) {
 
     int n = 0;
     std::string smoother_name;
-    double tol = 1e-10;
-    int max_vcycles = 200;
+    double tol = 1e-9;
+    int max_vcycles = 300;
 
     // parse de argumentos
     for (int i = 1; i < argc; i++) {
