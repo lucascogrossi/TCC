@@ -17,18 +17,16 @@ void print_usage() {
               << "  --smoother  Metodo de suavizacao:\n"
               << "                jacobi, jacobi_amortecido, gauss_seidel,\n"
               << "                gauss_seidel_rb, sor\n"
-              << "  --tol       Tolerancia para convergencia (default: 1e-9)\n"
               << "\n"
               << "Exemplo:\n"
-              << "  ./multigrid_2d --n 256 --smoother gauss_seidel_rb --tol 1e-8\n";
+              << "  ./multigrid --n 256 --smoother gauss_seidel_rb --tol 1e-8\n";
 }
 
 int main(int argc, char* argv[]) {
 
     int n = 0;
     std::string smoother_name;
-    double tol = 1e-9;
-    int max_vcycles = 300;
+    int max_vcycles = 10;
 
     // parse de argumentos
     for (int i = 1; i < argc; i++) {
@@ -37,8 +35,6 @@ int main(int argc, char* argv[]) {
             n = std::atoi(argv[++i]);
         else if (arg == "--smoother" && i + 1 < argc)
             smoother_name = argv[++i];
-        else if (arg == "--tol" && i + 1 < argc)
-            tol = std::atof(argv[++i]);
         else if (arg == "--help" || arg == "-h") {
             print_usage();
             return 0;
@@ -76,8 +72,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\n=== Multigrid V-cycle 2D ===\n"
               << "grid:     " << n << "x" << n << " em [0,1]x[0,1]\n"
-              << "smoother: " << smoother_name << "\n"
-              << "tol:      " << tol << "\n\n";
+              << "smoother: " << smoother_name << "\n";
 
     // cria grid com n intervalos em cada direcao
     Grid2D grid(n, n, 1.0, 1.0);
@@ -100,11 +95,6 @@ int main(int argc, char* argv[]) {
         v_cycle(grid, smooth);
         double res = residual_norm(grid);
         std::cout << "v-cycle " << k << "  residuo = " << res << std::endl;
-
-        if (res < tol) {
-            std::cout << "\nConvergiu em " << k << " v-cycles.\n";
-            break;
-        }
     }
 
     auto t_end = std::chrono::high_resolution_clock::now();
