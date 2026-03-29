@@ -32,23 +32,22 @@ inline double residual_norm(const Grid2D& grid) {
     }
     return sqrt(norm * grid.hx * grid.hy);
 }
+*/
 
-inline std::vector<double> restriction(const std::vector<double>& r, int nx, int ny) {
+// cada thread cuida de um ponto do grid grosso
+// pre alocar r_coarse no host
+__global__ void restriction_kernel(const double *r, double* r_coarse, int nx, int ny) {
+
     // numero de intervalos do grid gross em cada direcao
     int nx_c = nx / 2;
     int ny_c = ny / 2;
     
-    std::vector<double> r_coarse((nx_c+1) * (ny_c + 1), 0.0);
-    
-    // Full weighting
-    // Pesos:
-    // 1  2  1
-    // 2  4  2   × (1/16)
-    // 1  2  1
-    for (int i = 1; i < nx_c; i++) {
-        for (int j = 1; j < ny_c; j++) {
-        int i_fine = 2*i;     // indice correspondente no grid fino
-        int j_fine = 2*j;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (i >= 1 && i < nx_c && j >= 1 && j < ny_c) {
+        int i_fine = 2 * i;
+        int j_fine = 2 * j;
 
         r_coarse[i*(ny_c+1) + j] =
             (1.0/16.0) * (
@@ -61,11 +60,11 @@ inline std::vector<double> restriction(const std::vector<double>& r, int nx, int
                 // centro (peso 4)
                 4.0 * r[i_fine*(ny+1) + j_fine]
             );
-        }
+
     }
-    return r_coarse;
 }
 
+/*
 inline std::vector<double> prolongation(const std::vector<double>& e_coarse, int nx_c, int ny_c) {
     // grid fino tem n_coarse*2 intervalos
     int nx_f = nx_c * 2;
