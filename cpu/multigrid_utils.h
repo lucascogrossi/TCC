@@ -99,4 +99,10 @@ inline void solve_coarse(Grid2D& coarse) {
     gauss_seidel_rb(coarse);
 }
 
+inline void correct(Grid2D& grid, const std::vector<double>& e_fine) {
+    for (int i = 1; i < grid.nx; i++)
+        for (int j = 1; j < grid.ny; j++)
+            grid.u[grid.idx(i, j)] += e_fine[grid.idx(i, j)];
+}
+
 #endif

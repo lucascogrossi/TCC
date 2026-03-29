@@ -35,9 +35,7 @@ void v_cycle(Grid2D& grid, Smoother smooth) {
     std::vector<double> e_fine = prolongation(coarse_grid.u, nx_c, ny_c);
 
     // 6. corrige solucao
-    for (int i = 1; i < grid.nx; i++)
-        for (int j = 1; j < grid.ny; j++)
-            grid.u[grid.idx(i, j)] += e_fine[grid.idx(i, j)];
+    correct(grid, e_fine);
 
     // 7. pos-suavizacao
     for (int k = 0; k < 2; k++)
