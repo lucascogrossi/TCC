@@ -94,11 +94,20 @@ __global__ void prolongation_kernel(const double* e_coarse, double* e_fine, int 
     }
 }
 
-/*
-inline void solve_coarse(Grid2D& coarse) {
-    std::fill(coarse.u.begin(), coarse.u.end(), 0.0);
-    gauss_seidel_rb(coarse);
+// No momento o grid mais grosso tem apenas 1 ponto interior.
+// 255 threads ficam ocisas
+__host__ void solve_coarse(Grid2D* grid, int sweeps = 1) {
+    cudaMemset(grid->u, 0, (grid->nx+1)*(grid->ny+1)*sizeof(double));
+
+    dim3 block(16, 16);
+    dim3 grid_dim((grid->ny + block.x - 1) / block.x,
+              (grid->nx + block.y - 1) / block.y);
+
+    for (int k = 0; k < sweeps; k++) {
+        gauss_seidel_rb_kernel<<<grid_dim, block>>>(grid, 0);
+        gauss_seidel_rb_kernel<<<grid_dim, block>>>(grid, 1);
+    }
 }
-*/
+
 
 #endif
