@@ -1,4 +1,7 @@
-cuda/multigrid_cuda
-cpu/multigrid_cpu
+# Binaries
+multigrid_cuda
+multigrid_cpu
+
+# Build artifacts
 *.o
 *.out
