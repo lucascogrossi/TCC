@@ -1,7 +1,5 @@
 # multigrid-cuda
 
-⚠️ Work in progress!
+Trabalho de conclusão de curso
 
-GPU accelerated 2D Multigrid V-cycle solver for the Poisson equation, implemented in raw CUDA.
-
-Solves: −∇²u = f on [0,Lx]×[0,Ly] with Dirichlet boundary conditions.
+Implementação e paralelização do Método Multigrid com V-ciclo em processadores gráficos de propósito geral (GPGPUs)
