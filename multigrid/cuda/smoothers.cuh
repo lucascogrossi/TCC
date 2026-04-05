@@ -1,7 +1,11 @@
 #ifndef SMOOTHERS_CUDA_H
 #define SMOOTHERS_CUDA_H
 
+#include <utility>
+
 #include "grid_device.cuh"
+
+enum SmootherType { JACOBI, JACOBI_AMORTECIDO, GAUSS_SEIDEL_RB };
 
 // No host: declarar u_new e swap
 __global__ void jacobi_kernel(Grid2D* grid, double* u_new) {
@@ -55,6 +59,22 @@ __global__ void gauss_seidel_rb_kernel(Grid2D* grid, int color) {
                                           (grid->u[grid->idx(i, j-1)] + grid->u[grid->idx(i, j+1)]) / hy2 +
                                           grid->f[grid->idx(i,j)]) / diag;
         }
+    }
+}
+
+__host__ void smooth_grid(Grid2D* g, SmootherType smoother, dim3 numBlocks, dim3 numThreads) {
+    if (smoother == GAUSS_SEIDEL_RB) {
+        gauss_seidel_rb_kernel<<<numBlocks, numThreads>>>(g, 0);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        gauss_seidel_rb_kernel<<<numBlocks, numThreads>>>(g, 1);
+        CUDA_CHECK(cudaDeviceSynchronize());
+    } else {
+        if (smoother == JACOBI)
+            jacobi_kernel<<<numBlocks, numThreads>>>(g, g->u_new);
+        else
+            jacobi_amortecido_kernel<<<numBlocks, numThreads>>>(g, g->u_new);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        std::swap(g->u, g->u_new);
     }
 }
 

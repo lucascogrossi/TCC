@@ -1,40 +1,26 @@
 #include <iostream>
 #include <cmath>
+#include <cstring>
 
+#include "../../multigrid/cuda/cuda_check.cuh"
 #include "../../multigrid/cuda/grid_device.cuh"
 #include "../../multigrid/cuda/smoothers.cuh"
 #include "../../multigrid/cuda/multigrid_utils.cuh"
 
-enum SmootherType { JACOBI, JACOBI_AMORTECIDO, GAUSS_SEIDEL_RB };
-
 void print_usage() {
-    std::cout << "Uso: ./sg_cuda <n> <smoother> [tol] [max_iters]\n"
+    std::cout << "Uso: ./sg_cuda <n> <smoother> [tol] [max_iters] [--csv]\n"
               << "\n"
               << "Argumentos:\n"
               << "  n          Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
               << "  smoother   jacobi | jacobi_amortecido | gauss_seidel_rb\n"
               << "  tol        Tolerancia para convergencia (default: 1e-6)\n"
               << "  max_iters  Numero maximo de iteracoes (default: 100000)\n"
+              << "  --csv      Saida em formato CSV (para benchmarks)\n"
               << "\n"
               << "Exemplo:\n"
               << "  ./sg_cuda 256 gauss_seidel_rb\n"
-              << "  ./sg_cuda 256 jacobi_amortecido 1e-8 50000\n";
-}
-
-void smooth_once(Grid2D* g, SmootherType smoother, dim3 numBlocks, dim3 numThreads) {
-    if (smoother == GAUSS_SEIDEL_RB) {
-        gauss_seidel_rb_kernel<<<numBlocks, numThreads>>>(g, 0);
-        cudaDeviceSynchronize();
-        gauss_seidel_rb_kernel<<<numBlocks, numThreads>>>(g, 1);
-        cudaDeviceSynchronize();
-    } else {
-        if (smoother == JACOBI)
-            jacobi_kernel<<<numBlocks, numThreads>>>(g, g->u_new);
-        else
-            jacobi_amortecido_kernel<<<numBlocks, numThreads>>>(g, g->u_new);
-        cudaDeviceSynchronize();
-        std::swap(g->u, g->u_new);
-    }
+              << "  ./sg_cuda 256 jacobi_amortecido 1e-8 50000\n"
+              << "  ./sg_cuda 256 gauss_seidel_rb 1e-6 100000 --csv\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -44,10 +30,17 @@ int main(int argc, char* argv[]) {
         return argc < 3 ? 1 : 0;
     }
 
+    // checa flag --csv em qualquer posicao
+    bool csv_output = false;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--csv") == 0)
+            csv_output = true;
+    }
+
     int n = std::atoi(argv[1]);
     std::string smoother_name = argv[2];
-    double tol = (argc > 3) ? std::atof(argv[3]) : 1e-6;
-    int max_iters = (argc > 4) ? std::atoi(argv[4]) : 100000;
+    double tol = (argc > 3 && strcmp(argv[3], "--csv") != 0) ? std::atof(argv[3]) : 1e-6;
+    int max_iters = (argc > 4 && strcmp(argv[4], "--csv") != 0) ? std::atoi(argv[4]) : 100000;
 
     SmootherType smoother;
     if (smoother_name == "jacobi")
@@ -62,21 +55,23 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::cout << "\n=== Single-grid 2D (CUDA) ===\n"
-              << "grid:      " << n << "x" << n << " em [0,1]x[0,1]\n"
-              << "smoother:  " << smoother_name << "\n"
-              << "max_iters: " << max_iters << "\n"
-              << "tol:       " << tol << "\n\n";
+    if (!csv_output) {
+        std::cout << "\n=== Single-grid 2D (CUDA) ===\n"
+                  << "grid:      " << n << "x" << n << " em [0,1]x[0,1]\n"
+                  << "smoother:  " << smoother_name << "\n"
+                  << "max_iters: " << max_iters << "\n"
+                  << "tol:       " << tol << "\n\n";
+    }
 
     // aloca grid em unified memory
     Grid2D* g;
-    cudaMallocManaged(&g, sizeof(Grid2D));
+    CUDA_CHECK(cudaMallocManaged(&g, sizeof(Grid2D)));
     new (g) Grid2D(n, n, 1.0, 1.0);
 
     double* d_result;
-    cudaMallocManaged(&d_result, sizeof(double));
+    CUDA_CHECK(cudaMallocManaged(&d_result, sizeof(double)));
 
-    // inicializa f: −∇²u = 2π²sin(πx)sin(πy), solucao: u = sin(πx)sin(πy)
+    // inicializa f: -nabla^2 u = 2*pi^2*sin(pi*x)*sin(pi*y), solucao: u = sin(pi*x)*sin(pi*y)
     for (int i = 1; i < g->nx; i++) {
         for (int j = 1; j < g->ny; j++) {
             double x = i * g->hx;
@@ -90,27 +85,29 @@ int main(int argc, char* argv[]) {
                    (g->nx + numThreadsPerBlock.y - 1) / numThreadsPerBlock.y);
 
     cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
+    CUDA_CHECK(cudaEventRecord(start));
 
     int k;
+    double res = 0.0;
     for (k = 1; k <= max_iters; k++) {
-        smooth_once(g, smoother, numBlocks, numThreadsPerBlock);
-        double res = residual_norm_gpu(g, d_result);
-        std::cout << "iter " << k << "  residuo = " << res << "\n";
+        smooth_grid(g, smoother, numBlocks, numThreadsPerBlock);
+        res = residual_norm_gpu(g, d_result);
+        if (!csv_output)
+            std::cout << "iter " << k << "  residuo = " << res << "\n";
         if (res < tol)
             break;
     }
 
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
+    CUDA_CHECK(cudaEventRecord(stop));
+    CUDA_CHECK(cudaEventSynchronize(stop));
     float elapsed_ms = 0;
-    cudaEventElapsedTime(&elapsed_ms, start, stop);
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start, stop));
+    CUDA_CHECK(cudaEventDestroy(start));
+    CUDA_CHECK(cudaEventDestroy(stop));
 
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     // calcula erro maximo contra solucao analitica
     double max_err = 0.0;
@@ -124,20 +121,26 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::cout << "\n=== Resultados ===\n"
-              << "residuo final:  " << residual_norm_gpu(g, d_result) << "\n"
-              << "erro maximo:    " << max_err << "\n"
-              << "tempo total:    " << elapsed_ms << " ms\n";
+    if (csv_output) {
+        // sg,cuda,n,smoother,iterations,residual,max_error,time_ms
+        std::cout << "sg,cuda," << n << "," << smoother_name << ","
+                  << k << "," << res << "," << max_err << "," << elapsed_ms << "\n";
+    } else {
+        std::cout << "\n=== Resultados ===\n"
+                  << "residuo final:  " << res << "\n"
+                  << "erro maximo:    " << max_err << "\n"
+                  << "tempo total:    " << elapsed_ms << " ms\n";
+    }
 
     // libera memoria
-    cudaFree(d_result);
-    cudaFree(g->u);
-    cudaFree(g->u_new);
-    cudaFree(g->f);
-    cudaFree(g->r);
-    cudaFree(g->e);
+    CUDA_CHECK(cudaFree(d_result));
+    CUDA_CHECK(cudaFree(g->u));
+    CUDA_CHECK(cudaFree(g->u_new));
+    CUDA_CHECK(cudaFree(g->f));
+    CUDA_CHECK(cudaFree(g->r));
+    CUDA_CHECK(cudaFree(g->e));
     g->~Grid2D();
-    cudaFree(g);
+    CUDA_CHECK(cudaFree(g));
 
     return 0;
 }

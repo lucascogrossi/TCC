@@ -1,7 +1,10 @@
 #ifndef GRID_DEVICE_H
 #define GRID_DEVICE_H
 
-#include <stdexcept>
+#include <cstdio>
+#include <cstdlib>
+
+#include "cuda_check.cuh"
 
 struct Grid2D {
     int nx, ny;            // intervalos em cada direção
@@ -18,17 +21,21 @@ struct Grid2D {
         : nx(nx), ny(ny), Lx(Lx), Ly(Ly),
           hx(Lx / nx), hy(Ly / ny),
           u(nullptr), u_new(nullptr), f(nullptr), r(nullptr), e(nullptr) {
+        if (nx <= 0 || ny <= 0 || (nx & (nx - 1)) != 0 || (ny & (ny - 1)) != 0) {
+            fprintf(stderr, "Erro: nx e ny devem ser potencias de 2 (recebido nx=%d, ny=%d)\n", nx, ny);
+            exit(EXIT_FAILURE);
+        }
         int size = (nx+1) * (ny+1) * sizeof(double);
-        cudaMallocManaged(&u, size);
-        cudaMemset(u, 0, size);
-        cudaMallocManaged(&u_new, size);
-        cudaMemset(u_new, 0, size);
-        cudaMallocManaged(&f, size);
-        cudaMemset(f, 0, size);
-        cudaMallocManaged(&r, size);
-        cudaMemset(r, 0, size);
-        cudaMallocManaged(&e, size);
-        cudaMemset(e, 0, size);
+        CUDA_CHECK(cudaMallocManaged(&u, size));
+        CUDA_CHECK(cudaMemset(u, 0, size));
+        CUDA_CHECK(cudaMallocManaged(&u_new, size));
+        CUDA_CHECK(cudaMemset(u_new, 0, size));
+        CUDA_CHECK(cudaMallocManaged(&f, size));
+        CUDA_CHECK(cudaMemset(f, 0, size));
+        CUDA_CHECK(cudaMallocManaged(&r, size));
+        CUDA_CHECK(cudaMemset(r, 0, size));
+        CUDA_CHECK(cudaMallocManaged(&e, size));
+        CUDA_CHECK(cudaMemset(e, 0, size));
     }
 
     // Indexacao row major

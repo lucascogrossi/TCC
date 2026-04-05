@@ -95,14 +95,4 @@ inline void gauss_seidel_rb(Grid2D& grid) {
     }
 }
 
-inline void gauss_seidel_linha(Grid2D& grid) {
-    // TODO
-    return;
-}
-
-inline void gauss_seidel_coluna(Grid2D& grid) {
-    // TODO
-    return;
-}
-
 #endif

@@ -64,9 +64,9 @@ __host__ double residual_norm_gpu(Grid2D* grid, double* d_result) {
 
     *d_result = 0.0;
     compute_residual_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, grid->r);
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());
     residual_norm_kernel<<<numBlocks, numThreadsPerBlock, sharedMem>>>(grid->r, d_result, grid->nx, grid->ny);
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     return sqrt(*d_result * grid->hx * grid->hy);
 }
@@ -78,7 +78,7 @@ __global__ void restriction_kernel(const double *r, double* r_coarse, int nx, in
     // numero de intervalos do grid gross em cada direcao
     int nx_c = nx / 2;
     int ny_c = ny / 2;
-    
+
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -113,15 +113,15 @@ __global__ void prolongation_kernel(const double* e_coarse, double* e_fine, int 
     if (i <= nx_c && j <= ny_c) {
         // caso 1: copia direto
         e_fine[2*i*(ny_f+1) + 2*j] = e_coarse[i*(ny_c+1) + j];
-        
+
         // caso 2: media horizontal
         if (j < ny_c)
             e_fine[2*i*(ny_f+1) + 2*j+1] = (e_coarse[i*(ny_c+1) + j] + e_coarse[i*(ny_c+1) + j+1]) / 2.0;
-          
+
         // caso 3: media vertical
         if (i < nx_c)
              e_fine[(2*i+1)*(ny_f+1) + 2*j] = (e_coarse[i*(ny_c+1) + j] + e_coarse[(i+1)*(ny_c+1) + j]) / 2.0;
-            
+
         // caso 4: media dos 4 vizinhos
         if (i < nx_c && j < ny_c)
             e_fine[(2*i+1)*(ny_f+1) + 2*j+1] = (e_coarse[i*(ny_c+1) + j] + e_coarse[i*(ny_c+1) + j+1] +
@@ -142,7 +142,7 @@ __global__ void correct_kernel(Grid2D* grid, const double* e_fine) {
 // No momento o grid mais grosso tem apenas 1 ponto interior.
 // 255 threads ficam ociosas
 __host__ void solve_coarse(Grid2D* grid, int sweeps = 1) {
-    cudaMemset(grid->u, 0, (grid->nx+1)*(grid->ny+1)*sizeof(double));
+    CUDA_CHECK(cudaMemset(grid->u, 0, (grid->nx+1)*(grid->ny+1)*sizeof(double)));
 
     dim3 numThreadsPerBlock(16, 16);
     dim3 numBlocks((grid->ny + numThreadsPerBlock.x - 1) / numThreadsPerBlock.x,
@@ -150,9 +150,9 @@ __host__ void solve_coarse(Grid2D* grid, int sweeps = 1) {
 
     for (int k = 0; k < sweeps; k++) {
         gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, 0);
-        cudaDeviceSynchronize();
+        CUDA_CHECK(cudaDeviceSynchronize());
         gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, 1);
-        cudaDeviceSynchronize();
+        CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
 
