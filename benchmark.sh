@@ -54,8 +54,8 @@ run_bench() {
 
 # Contar total de testes
 total=0
-for method in sg mg; do
-    for plat in cpu cuda; do
+for method in mg sg; do
+    for plat in cuda cpu; do
         if [ "$plat" = "cpu" ]; then
             smoothers=("${SMOOTHERS_CPU[@]}")
         else
@@ -69,8 +69,8 @@ done
 
 current=0
 
-for method in sg mg; do
-    for plat in cpu cuda; do
+for method in mg sg; do
+    for plat in cuda cpu; do
         # Selecionar binario
         if [ "$method" = "sg" ] && [ "$plat" = "cpu" ]; then
             bin="$SG_CPU"
