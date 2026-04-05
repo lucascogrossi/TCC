@@ -64,32 +64,33 @@ int main(int argc, char* argv[]) {
                   << "tol:       " << tol << "\n\n";
     }
 
-    // pre-aloca hierarquia de grids em unified memory
+    // pre-aloca hierarquia de grids (struct no host, arrays no device)
     std::vector<Grid2D*> grids;
     int nx = n;
     while (nx >= 2) {
-        Grid2D* g;
-        CUDA_CHECK(cudaMallocManaged(&g, sizeof(Grid2D)));
-        new (g) Grid2D(nx, nx, 1.0, 1.0);
+        Grid2D* g = new Grid2D(nx, nx, 1.0, 1.0);
         grids.push_back(g);
         nx /= 2;
     }
 
     // buffer para acumular soma da reducao na GPU
     double* d_result;
-    CUDA_CHECK(cudaMallocManaged(&d_result, sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(double)));
 
     // inicializa f no grid fino
     // Equacao: -nabla^2 u(x,y) = 2*pi^2*sin(pi*x)*sin(pi*y)
     // Solucao analitica: u(x,y) = sin(pi*x) * sin(pi*y)
     Grid2D* fine = grids[0];
+    int fine_size = (fine->nx+1) * (fine->ny+1);
+    std::vector<double> h_f(fine_size, 0.0);
     for (int i = 1; i < fine->nx; i++) {
         for (int j = 1; j < fine->ny; j++) {
             double x = i * fine->hx;
             double y = j * fine->hy;
-            fine->f[fine->idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
+            h_f[fine->idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
         }
     }
+    CUDA_CHECK(cudaMemcpy(fine->f, h_f.data(), fine_size * sizeof(double), cudaMemcpyHostToDevice));
 
     // mede tempo com cudaEvent
     cudaEvent_t start, stop;
@@ -118,13 +119,15 @@ int main(int argc, char* argv[]) {
     CUDA_CHECK(cudaDeviceSynchronize());
 
     // calcula erro maximo contra solucao analitica na CPU
+    std::vector<double> h_u(fine_size);
+    CUDA_CHECK(cudaMemcpy(h_u.data(), fine->u, fine_size * sizeof(double), cudaMemcpyDeviceToHost));
     double max_err = 0.0;
     for (int i = 1; i < fine->nx; i++) {
         for (int j = 1; j < fine->ny; j++) {
             double x = i * fine->hx;
             double y = j * fine->hy;
             double u_exact = sin(M_PI * x) * sin(M_PI * y);
-            double err = fabs(fine->u[fine->idx(i, j)] - u_exact);
+            double err = fabs(h_u[fine->idx(i, j)] - u_exact);
             if (err > max_err) max_err = err;
         }
     }
@@ -148,8 +151,7 @@ int main(int argc, char* argv[]) {
         CUDA_CHECK(cudaFree(g->f));
         CUDA_CHECK(cudaFree(g->r));
         CUDA_CHECK(cudaFree(g->e));
-        g->~Grid2D();
-        CUDA_CHECK(cudaFree(g));
+        delete g;
     }
 
     return 0;

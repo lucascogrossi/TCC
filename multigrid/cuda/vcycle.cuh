@@ -22,7 +22,7 @@ __host__ void v_cycle(std::vector<Grid2D*>& grids, SmootherType smoother) {
             smooth_grid(grids[i], smoother, numBlocks, numThreadsPerBlock);
 
         // 2. Calcula residuo
-        compute_residual_kernel<<<numBlocks, numThreadsPerBlock>>>(grids[i], grids[i]->r);
+        compute_residual_kernel<<<numBlocks, numThreadsPerBlock>>>(*grids[i], grids[i]->r);
         CUDA_CHECK(cudaDeviceSynchronize());
 
         // 3. Restrict — numBlocks calculado para o grid grosso (destino)
@@ -52,7 +52,7 @@ __host__ void v_cycle(std::vector<Grid2D*>& grids, SmootherType smoother) {
         CUDA_CHECK(cudaDeviceSynchronize());
 
         // 7. Correct
-        correct_kernel<<<numBlocks, numThreadsPerBlock>>>(grids[i], grids[i]->e);
+        correct_kernel<<<numBlocks, numThreadsPerBlock>>>(*grids[i], grids[i]->e);
         CUDA_CHECK(cudaDeviceSynchronize());
 
         // 8. Pos suavizacao

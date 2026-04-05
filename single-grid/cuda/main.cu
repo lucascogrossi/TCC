@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include <cmath>
 #include <cstring>
 
@@ -63,22 +64,23 @@ int main(int argc, char* argv[]) {
                   << "tol:       " << tol << "\n\n";
     }
 
-    // aloca grid em unified memory
-    Grid2D* g;
-    CUDA_CHECK(cudaMallocManaged(&g, sizeof(Grid2D)));
-    new (g) Grid2D(n, n, 1.0, 1.0);
+    // aloca grid (struct no host, arrays no device)
+    Grid2D* g = new Grid2D(n, n, 1.0, 1.0);
 
     double* d_result;
-    CUDA_CHECK(cudaMallocManaged(&d_result, sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&d_result, sizeof(double)));
 
     // inicializa f: -nabla^2 u = 2*pi^2*sin(pi*x)*sin(pi*y), solucao: u = sin(pi*x)*sin(pi*y)
+    int grid_size = (g->nx+1) * (g->ny+1);
+    std::vector<double> h_f(grid_size, 0.0);
     for (int i = 1; i < g->nx; i++) {
         for (int j = 1; j < g->ny; j++) {
             double x = i * g->hx;
             double y = j * g->hy;
-            g->f[g->idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
+            h_f[g->idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
         }
     }
+    CUDA_CHECK(cudaMemcpy(g->f, h_f.data(), grid_size * sizeof(double), cudaMemcpyHostToDevice));
 
     dim3 numThreadsPerBlock(16, 16);
     dim3 numBlocks((g->ny + numThreadsPerBlock.x - 1) / numThreadsPerBlock.x,
@@ -110,13 +112,15 @@ int main(int argc, char* argv[]) {
     CUDA_CHECK(cudaDeviceSynchronize());
 
     // calcula erro maximo contra solucao analitica
+    std::vector<double> h_u(grid_size);
+    CUDA_CHECK(cudaMemcpy(h_u.data(), g->u, grid_size * sizeof(double), cudaMemcpyDeviceToHost));
     double max_err = 0.0;
     for (int i = 1; i < g->nx; i++) {
         for (int j = 1; j < g->ny; j++) {
             double x = i * g->hx;
             double y = j * g->hy;
             double u_exact = sin(M_PI * x) * sin(M_PI * y);
-            double err = fabs(g->u[g->idx(i, j)] - u_exact);
+            double err = fabs(h_u[g->idx(i, j)] - u_exact);
             if (err > max_err) max_err = err;
         }
     }
@@ -139,8 +143,7 @@ int main(int argc, char* argv[]) {
     CUDA_CHECK(cudaFree(g->f));
     CUDA_CHECK(cudaFree(g->r));
     CUDA_CHECK(cudaFree(g->e));
-    g->~Grid2D();
-    CUDA_CHECK(cudaFree(g));
+    delete g;
 
     return 0;
 }

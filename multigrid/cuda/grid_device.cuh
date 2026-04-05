@@ -26,15 +26,15 @@ struct Grid2D {
             exit(EXIT_FAILURE);
         }
         int size = (nx+1) * (ny+1) * sizeof(double);
-        CUDA_CHECK(cudaMallocManaged(&u, size));
+        CUDA_CHECK(cudaMalloc(&u, size));
         CUDA_CHECK(cudaMemset(u, 0, size));
-        CUDA_CHECK(cudaMallocManaged(&u_new, size));
+        CUDA_CHECK(cudaMalloc(&u_new, size));
         CUDA_CHECK(cudaMemset(u_new, 0, size));
-        CUDA_CHECK(cudaMallocManaged(&f, size));
+        CUDA_CHECK(cudaMalloc(&f, size));
         CUDA_CHECK(cudaMemset(f, 0, size));
-        CUDA_CHECK(cudaMallocManaged(&r, size));
+        CUDA_CHECK(cudaMalloc(&r, size));
         CUDA_CHECK(cudaMemset(r, 0, size));
-        CUDA_CHECK(cudaMallocManaged(&e, size));
+        CUDA_CHECK(cudaMalloc(&e, size));
         CUDA_CHECK(cudaMemset(e, 0, size));
     }
 

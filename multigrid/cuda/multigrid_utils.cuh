@@ -7,17 +7,17 @@
 #include "smoothers.cuh"
 
 // pre alocar r no host
-__global__ void compute_residual_kernel(const Grid2D* grid, double* r) {
-    double hx2 = grid->hx * grid->hx;
-    double hy2 = grid->hy * grid->hy;
+__global__ void compute_residual_kernel(Grid2D grid, double* r) {
+    double hx2 = grid.hx * grid.hx;
+    double hy2 = grid.hy * grid.hy;
 
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (i >= 1 && i < grid->nx && j >= 1 && j < grid->ny) {
-            double Au_ij = (-grid->u[grid->idx(i-1,j)] + 2*grid->u[grid->idx(i,j)] - grid->u[grid->idx(i+1,j)]) / hx2
-                         + (-grid->u[grid->idx(i,j-1)] + 2*grid->u[grid->idx(i,j)] - grid->u[grid->idx(i,j+1)]) / hy2;
-            r[grid->idx(i, j)] = grid->f[grid->idx(i, j)] - Au_ij;
+    if (i >= 1 && i < grid.nx && j >= 1 && j < grid.ny) {
+            double Au_ij = (-grid.u[grid.idx(i-1,j)] + 2*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i+1,j)]) / hx2
+                         + (-grid.u[grid.idx(i,j-1)] + 2*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i,j+1)]) / hy2;
+            r[grid.idx(i, j)] = grid.f[grid.idx(i, j)] - Au_ij;
     }
 }
 
@@ -62,13 +62,15 @@ __host__ double residual_norm_gpu(Grid2D* grid, double* d_result) {
                    (grid->nx + numThreadsPerBlock.y - 1) / numThreadsPerBlock.y);
     int sharedMem = numThreadsPerBlock.x * numThreadsPerBlock.y * sizeof(double);
 
-    *d_result = 0.0;
-    compute_residual_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, grid->r);
+    CUDA_CHECK(cudaMemset(d_result, 0, sizeof(double)));
+    compute_residual_kernel<<<numBlocks, numThreadsPerBlock>>>(*grid, grid->r);
     CUDA_CHECK(cudaDeviceSynchronize());
     residual_norm_kernel<<<numBlocks, numThreadsPerBlock, sharedMem>>>(grid->r, d_result, grid->nx, grid->ny);
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    return sqrt(*d_result * grid->hx * grid->hy);
+    double h_result;
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(double), cudaMemcpyDeviceToHost));
+    return sqrt(h_result * grid->hx * grid->hy);
 }
 
 // cada thread cuida de um ponto do grid grosso
@@ -129,13 +131,13 @@ __global__ void prolongation_kernel(const double* e_coarse, double* e_fine, int 
     }
 }
 
-__global__ void correct_kernel(Grid2D* grid, const double* e_fine) {
+__global__ void correct_kernel(Grid2D grid, const double* e_fine) {
 
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (i >= 1 && i < grid->nx && j >= 1 && j < grid->ny) {
-        grid->u[grid->idx(i, j)] += e_fine[grid->idx(i, j)];
+    if (i >= 1 && i < grid.nx && j >= 1 && j < grid.ny) {
+        grid.u[grid.idx(i, j)] += e_fine[grid.idx(i, j)];
     }
 }
 
@@ -149,9 +151,9 @@ __host__ void solve_coarse(Grid2D* grid, int sweeps = 1) {
               (grid->nx + numThreadsPerBlock.y - 1) / numThreadsPerBlock.y);
 
     for (int k = 0; k < sweeps; k++) {
-        gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, 0);
+        gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(*grid, 0);
         CUDA_CHECK(cudaDeviceSynchronize());
-        gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, 1);
+        gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(*grid, 1);
         CUDA_CHECK(cudaDeviceSynchronize());
     }
 }
