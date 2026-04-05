@@ -21,19 +21,55 @@ __global__ void compute_residual_kernel(const Grid2D* grid, double* r) {
     }
 }
 
-/*
-TODO: REDUCAO NA GPU
-inline double residual_norm(const Grid2D& grid) {
-    std::vector<double> r = compute_residual(grid);
-    double norm = 0.0;
-    for (int i = 1; i < grid.nx; i++) {
-        for (int j = 1; j < grid.ny; j++) {
-            norm += r[grid.idx(i, j)] * r[grid.idx(i, j)];
-        }
+// Cada bloco reduz sua porcao de r[] para uma soma parcial de r^2,
+// depois acumula atomicamente em result.
+// Requer compute capability >= 6.0 para atomicAdd em double.
+// Chamar com shared memory = blockDim.x * blockDim.y * sizeof(double).
+__global__ void residual_norm_kernel(const double* r, double* result, int nx, int ny) {
+
+    extern __shared__ double sdata[];
+
+    int j   = blockIdx.x * blockDim.x + threadIdx.x;
+    int i   = blockIdx.y * blockDim.y + threadIdx.y;
+    int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+    double val = 0.0;
+    if (i >= 1 && i < nx && j >= 1 && j < ny) {
+        double rij = r[i * (ny+1) + j];
+        val = rij * rij;
     }
-    return sqrt(norm * grid.hx * grid.hy);
+    sdata[tid] = val;
+    __syncthreads();
+
+    // reducao convergente em shared memory (baseada em SimpleSumReduction)
+    for (unsigned int stride = (blockDim.x * blockDim.y) / 2; stride > 0; stride >>= 1) {
+        if (tid < stride)
+            sdata[tid] += sdata[tid + stride];
+        __syncthreads();
+    }
+
+    if (tid == 0)
+        atomicAdd(result, sdata[0]);
 }
-*/
+
+// Executa compute_residual + reducao na GPU e retorna a norma L2.
+// d_result deve ser um ponteiro para double em unified memory, pre-zerado nao e necessario
+// (a funcao zera antes de chamar os kernels).
+__host__ double residual_norm_gpu(Grid2D* grid, double* d_result) {
+
+    dim3 numThreadsPerBlock(16, 16);
+    dim3 numBlocks((grid->ny + numThreadsPerBlock.x - 1) / numThreadsPerBlock.x,
+                   (grid->nx + numThreadsPerBlock.y - 1) / numThreadsPerBlock.y);
+    int sharedMem = numThreadsPerBlock.x * numThreadsPerBlock.y * sizeof(double);
+
+    *d_result = 0.0;
+    compute_residual_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, grid->r);
+    cudaDeviceSynchronize();
+    residual_norm_kernel<<<numBlocks, numThreadsPerBlock, sharedMem>>>(grid->r, d_result, grid->nx, grid->ny);
+    cudaDeviceSynchronize();
+
+    return sqrt(*d_result * grid->hx * grid->hy);
+}
 
 // cada thread cuida de um ponto do grid grosso
 // pre alocar r_coarse no host
@@ -114,7 +150,9 @@ __host__ void solve_coarse(Grid2D* grid, int sweeps = 1) {
 
     for (int k = 0; k < sweeps; k++) {
         gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, 0);
+        cudaDeviceSynchronize();
         gauss_seidel_rb_kernel<<<numBlocks, numThreadsPerBlock>>>(grid, 1);
+        cudaDeviceSynchronize();
     }
 }
 

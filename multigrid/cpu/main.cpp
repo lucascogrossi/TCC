@@ -10,16 +10,17 @@
 #include "vcycle.h"
 
 void print_usage() {
-    std::cout << "Uso: ./multigrid_cpu <n> <smoother> [tol]\n"
+    std::cout << "Uso: ./multigrid_cpu <n> <smoother> [tol] [max_iters]\n"
               << "\n"
               << "Argumentos:\n"
-              << "  n         Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
-              << "  smoother  jacobi | jacobi_amortecido | gauss_seidel | gauss_seidel_rb | sor\n"
-              << "  tol       Tolerancia para convergencia (default: 1e-6)\n"
+              << "  n          Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
+              << "  smoother   jacobi | jacobi_amortecido | gauss_seidel | gauss_seidel_rb | sor\n"
+              << "  tol        Tolerancia para convergencia (default: 1e-6)\n"
+              << "  max_iters  Numero maximo de v-cycles (default: 10000)\n"
               << "\n"
               << "Exemplo:\n"
               << "  ./multigrid_cpu 256 gauss_seidel_rb\n"
-              << "  ./multigrid_cpu 256 gauss_seidel_rb 1e-8\n";
+              << "  ./multigrid_cpu 256 gauss_seidel_rb 1e-8 500\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -32,7 +33,7 @@ int main(int argc, char* argv[]) {
     int n = std::atoi(argv[1]);
     std::string smoother_name = argv[2];
     double tol = (argc > 3) ? std::atof(argv[3]) : 1e-6;
-    int max_vcycles = 10000;
+    int max_vcycles = (argc > 4) ? std::atoi(argv[4]) : 10000;
 
     Smoother smooth;
     if (smoother_name == "jacobi")
@@ -51,9 +52,10 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "\n=== Multigrid V-cycle 2D ===\n"
-              << "grid:     " << n << "x" << n << " em [0,1]x[0,1]\n"
-              << "smoother: " << smoother_name << "\n"
-              << "tol:      " << tol << "\n\n";
+              << "grid:      " << n << "x" << n << " em [0,1]x[0,1]\n"
+              << "smoother:  " << smoother_name << "\n"
+              << "max_iters: " << max_vcycles << "\n"
+              << "tol:       " << tol << "\n\n";
 
     Grid2D grid(n, n, 1.0, 1.0);
 

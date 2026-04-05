@@ -11,7 +11,7 @@
 using Smoother = std::function<void(Grid2D&)>;
 
 void print_usage() {
-    std::cout << "Uso: ./single_grid_cpu <n> <smoother> [tol] [max_iters]\n"
+    std::cout << "Uso: ./sg_cpu <n> <smoother> [tol] [max_iters]\n"
               << "\n"
               << "Argumentos:\n"
               << "  n          Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"

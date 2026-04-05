@@ -7,16 +7,17 @@
 #include "vcycle.cuh"
 
 void print_usage() {
-    std::cout << "Uso: ./multigrid_cuda <n> <smoother> [max_vcycles]\n"
+    std::cout << "Uso: ./multigrid_cuda <n> <smoother> [tol] [max_iters]\n"
               << "\n"
               << "Argumentos:\n"
-              << "  n           Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
-              << "  smoother    jacobi | jacobi_amortecido | gauss_seidel_rb\n"
-              << "  max_vcycles Numero de v-cycles (default: 10)\n"
+              << "  n          Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
+              << "  smoother   jacobi | jacobi_amortecido | gauss_seidel_rb\n"
+              << "  tol        Tolerancia para convergencia (default: 1e-6)\n"
+              << "  max_iters  Numero maximo de v-cycles (default: 10000)\n"
               << "\n"
               << "Exemplo:\n"
               << "  ./multigrid_cuda 256 jacobi_amortecido\n"
-              << "  ./multigrid_cuda 256 gauss_seidel_rb 20\n";
+              << "  ./multigrid_cuda 256 gauss_seidel_rb 1e-8 500\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -28,7 +29,8 @@ int main(int argc, char* argv[]) {
 
     int n = std::atoi(argv[1]);
     std::string smoother_name = argv[2];
-    int max_vcycles = (argc > 3) ? std::atoi(argv[3]) : 10;
+    double tol = (argc > 3) ? std::atof(argv[3]) : 1e-6;
+    int max_vcycles = (argc > 4) ? std::atoi(argv[4]) : 10000;
 
     SmootherType smoother;
     if (smoother_name == "jacobi")
@@ -44,9 +46,10 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "\n=== Multigrid V-cycle 2D (CUDA) ===\n"
-              << "grid:        " << n << "x" << n << " em [0,1]x[0,1]\n"
-              << "smoother:    " << smoother_name << "\n"
-              << "max_vcycles: " << max_vcycles << "\n\n";
+              << "grid:      " << n << "x" << n << " em [0,1]x[0,1]\n"
+              << "smoother:  " << smoother_name << "\n"
+              << "max_iters: " << max_vcycles << "\n"
+              << "tol:       " << tol << "\n\n";
 
     // pre-aloca hierarquia de grids em unified memory
     std::vector<Grid2D*> grids;
@@ -58,6 +61,10 @@ int main(int argc, char* argv[]) {
         grids.push_back(g);
         nx /= 2;
     }
+
+    // buffer para acumular soma da reducao na GPU
+    double* d_result;
+    cudaMallocManaged(&d_result, sizeof(double));
 
     // inicializa f no grid fino
     // Equação: −∇²u(x,y) = 2π²sin(πx)sin(πy)
@@ -77,9 +84,13 @@ int main(int argc, char* argv[]) {
     cudaEventCreate(&stop);
     cudaEventRecord(start);
 
-    for (int k = 1; k <= max_vcycles; k++) {
+    int k;
+    for (k = 1; k <= max_vcycles; k++) {
         v_cycle(grids, smoother);
-        std::cout << "v-cycle " << k << "\n";
+        double res = residual_norm_gpu(fine, d_result);
+        std::cout << "v-cycle " << k << "  residuo = " << res << "\n";
+        if (res < tol)
+            break;
     }
 
     cudaEventRecord(stop);
@@ -89,7 +100,6 @@ int main(int argc, char* argv[]) {
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    // garante que dados estao disponiveis na CPU (unified memory)
     cudaDeviceSynchronize();
 
     // calcula erro maximo contra solucao analitica na CPU
@@ -104,28 +114,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // calcula residuo final na CPU
-    double hx2 = fine->hx * fine->hx;
-    double hy2 = fine->hy * fine->hy;
-    double norm = 0.0;
-    for (int i = 1; i < fine->nx; i++) {
-        for (int j = 1; j < fine->ny; j++) {
-            double Au = (-fine->u[fine->idx(i-1,j)] + 2*fine->u[fine->idx(i,j)] - fine->u[fine->idx(i+1,j)]) / hx2
-                      + (-fine->u[fine->idx(i,j-1)] + 2*fine->u[fine->idx(i,j)] - fine->u[fine->idx(i,j+1)]) / hy2;
-            double r = fine->f[fine->idx(i,j)] - Au;
-            norm += r * r;
-        }
-    }
-    double residuo = sqrt(norm * fine->hx * fine->hy);
-
+    double residuo_final = residual_norm_gpu(fine, d_result);
     std::cout << "\n=== Resultados ===\n"
-              << "residuo final:  " << residuo << "\n"
+              << "residuo final:  " << residuo_final << "\n"
               << "erro maximo:    " << max_err << "\n"
               << "tempo total:    " << elapsed_ms << " ms\n";
 
     // libera memoria
+    cudaFree(d_result);
     for (auto g : grids) {
         cudaFree(g->u);
+        cudaFree(g->u_new);
         cudaFree(g->f);
         cudaFree(g->r);
         cudaFree(g->e);
