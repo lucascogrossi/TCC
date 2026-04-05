@@ -1,8 +1,8 @@
 # Binaries
-multigrid_cpu
-multigrid_cuda
-sg_cpu
-sg_cuda
+single-grid/cpu/sg_cpu
+single-grid/cuda/sg_cuda
+multigrid/cpu/mg_cpu
+multigrid/cuda/mg_cuda
 
 # Build artifacts
 *.o
