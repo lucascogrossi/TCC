@@ -11,19 +11,17 @@
 #include "vcycle.h"
 
 void print_usage() {
-    std::cout << "Uso: ./multigrid_cpu <n> <smoother> [tol] [max_iters] [--csv]\n"
+    std::cout << "Uso: ./multigrid_cpu <n> <smoother> [tol] [max_iters]\n"
               << "\n"
               << "Argumentos:\n"
               << "  n          Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
               << "  smoother   jacobi | jacobi_amortecido | gauss_seidel | gauss_seidel_rb | sor\n"
               << "  tol        Tolerancia para convergencia (default: 1e-6)\n"
               << "  max_iters  Numero maximo de v-cycles (default: 10000)\n"
-              << "  --csv      Saida em formato CSV (para benchmarks)\n"
               << "\n"
               << "Exemplo:\n"
               << "  ./multigrid_cpu 256 gauss_seidel_rb\n"
-              << "  ./multigrid_cpu 256 gauss_seidel_rb 1e-8 500\n"
-              << "  ./multigrid_cpu 256 gauss_seidel_rb 1e-6 10000 --csv\n";
+              << "  ./multigrid_cpu 256 gauss_seidel_rb 1e-8 500\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -33,17 +31,10 @@ int main(int argc, char* argv[]) {
         return argc < 3 ? 1 : 0;
     }
 
-    // checa flag --csv em qualquer posicao
-    bool csv_output = false;
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--csv") == 0)
-            csv_output = true;
-    }
-
     int n = std::atoi(argv[1]);
     std::string smoother_name = argv[2];
-    double tol = (argc > 3 && strcmp(argv[3], "--csv") != 0) ? std::atof(argv[3]) : 1e-6;
-    int max_vcycles = (argc > 4 && strcmp(argv[4], "--csv") != 0) ? std::atoi(argv[4]) : 10000;
+    double tol = (argc > 3) ? std::atof(argv[3]) : 1e-6;
+    int max_vcycles = (argc > 4) ? std::atoi(argv[4]) : 10000;
 
     Smoother smooth;
     if (smoother_name == "jacobi")
@@ -61,13 +52,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (!csv_output) {
-        std::cout << "\n=== Multigrid V-cycle 2D ===\n"
-                  << "grid:      " << n << "x" << n << " em [0,1]x[0,1]\n"
-                  << "smoother:  " << smoother_name << "\n"
-                  << "max_iters: " << max_vcycles << "\n"
-                  << "tol:       " << tol << "\n\n";
-    }
+    std::cout << "\n=== Multigrid V-cycle 2D ===\n"
+              << "grid:      " << n << "x" << n << " em [0,1]x[0,1]\n"
+              << "smoother:  " << smoother_name << "\n"
+              << "max_iters: " << max_vcycles << "\n"
+              << "tol:       " << tol << "\n\n";
 
     Grid2D grid(n, n, 1.0, 1.0);
 
@@ -88,8 +77,7 @@ int main(int argc, char* argv[]) {
     for (k = 1; k <= max_vcycles; k++) {
         v_cycle(grid, smooth);
         res = residual_norm(grid);
-        if (!csv_output)
-            std::cout << "v-cycle " << k << "  residuo = " << res << "\n";
+        std::cout << "v-cycle " << k << "  residuo = " << res << "\n";
         if (res < tol)
             break;
     }
@@ -108,16 +96,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (csv_output) {
-        // mg,cpu,n,smoother,iterations,residual,max_error,time_ms
-        std::cout << "mg,cpu," << n << "," << smoother_name << ","
-                  << k << "," << res << "," << max_err << "," << elapsed_ms << "\n";
-    } else {
-        std::cout << "\n=== Resultados ===\n"
-                  << "residuo final:  " << res << "\n"
-                  << "erro maximo:    " << max_err << "\n"
-                  << "tempo total:    " << elapsed_ms << " ms\n";
-    }
+    std::cout << "\n=== Resultados ===\n"
+              << "residuo final:  " << res << "\n"
+              << "erro maximo:    " << max_err << "\n"
+              << "tempo total:    " << elapsed_ms << " ms\n";
 
     return 0;
 }
