@@ -15,7 +15,7 @@ void print_usage() {
               << "  n          Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
               << "  smoother   jacobi | jacobi_amortecido | gauss_seidel_rb\n"
               << "  tol        Tolerancia para convergencia (default: 1e-6)\n"
-              << "  max_iters  Numero maximo de v-cycles (default: 10000)\n"
+              << "  max_iters  Numero maximo de v-cycles (default: 100)\n"
               << "\n"
               << "Exemplo:\n"
               << "  ./multigrid_cuda 256 jacobi_amortecido\n"
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     int n = std::atoi(argv[1]);
     std::string smoother_name = argv[2];
     double tol = (argc > 3) ? std::atof(argv[3]) : 1e-6;
-    int max_vcycles = (argc > 4) ? std::atoi(argv[4]) : 10000;
+    int max_vcycles = (argc > 4) ? std::atoi(argv[4]) : 100;
 
     SmootherType smoother;
     if (smoother_name == "jacobi")
