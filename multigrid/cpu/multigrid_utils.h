@@ -8,13 +8,12 @@
 
 inline std::vector<double> compute_residual(const Grid2D& grid) {
     std::vector<double> r((grid.nx+1) * (grid.ny+1), 0.0);
-    double hx2 = grid.hx * grid.hx;
-    double hy2 = grid.hy * grid.hy;
+    double h2 = grid.h * grid.h;
 
     for (int i = 1; i < grid.nx; i++) {
         for (int j = 1; j < grid.ny; j++) {
-            double Au_ij = (-grid.u[grid.idx(i-1,j)] + 2*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i+1,j)]) / hx2
-                         + (-grid.u[grid.idx(i,j-1)] + 2*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i,j+1)]) / hy2;
+            double Au_ij = (4*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i-1,j)] - grid.u[grid.idx(i+1,j)]
+                           - grid.u[grid.idx(i,j-1)] - grid.u[grid.idx(i,j+1)]) / h2;
             r[grid.idx(i, j)] = grid.f[grid.idx(i, j)] - Au_ij;
         }
     }
@@ -29,7 +28,7 @@ inline double residual_norm(const Grid2D& grid) {
             norm += r[grid.idx(i, j)] * r[grid.idx(i, j)];
         }
     }
-    return sqrt(norm * grid.hx * grid.hy);
+    return sqrt(norm * grid.h * grid.h);
 }
 
 inline std::vector<double> restriction(const std::vector<double>& r, int nx, int ny) {

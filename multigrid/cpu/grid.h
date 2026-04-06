@@ -6,7 +6,7 @@
 
 struct Grid2D {
     int nx, ny;            // intervalos em cada direção
-    double hx, hy;         // espaçamentos
+    double h;              // espaçamento (h = L/n)
     double Lx, Ly;         // comprimento do domínio
     std::vector<double> u;     // solucao aproximada em cada ponto (i, j)
     std::vector<double> u_new; // buffer temporario para jacobi
@@ -15,7 +15,7 @@ struct Grid2D {
     // Construtor
     Grid2D(int nx, int ny, double Lx, double Ly)
         : nx(nx), ny(ny), Lx(Lx), Ly(Ly),
-          hx(Lx / nx), hy(Ly / ny),
+          h(Lx / nx),
           u((nx+1) * (ny+1), 0.0), u_new((nx+1) * (ny+1), 0.0),
           f((nx+1) * (ny+1), 0.0) {
         if (nx <= 0 || ny <= 0 || (nx & (nx - 1)) != 0 || (ny & (ny - 1)) != 0)

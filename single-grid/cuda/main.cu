@@ -64,8 +64,8 @@ int main(int argc, char* argv[]) {
     std::vector<double> h_f(grid_size, 0.0);
     for (int i = 1; i < g->nx; i++) {
         for (int j = 1; j < g->ny; j++) {
-            double x = i * g->hx;
-            double y = j * g->hy;
+            double x = i * g->h;
+            double y = j * g->h;
             h_f[g->idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
         }
     }
@@ -105,8 +105,8 @@ int main(int argc, char* argv[]) {
     double max_err = 0.0;
     for (int i = 1; i < g->nx; i++) {
         for (int j = 1; j < g->ny; j++) {
-            double x = i * g->hx;
-            double y = j * g->hy;
+            double x = i * g->h;
+            double y = j * g->h;
             double u_exact = sin(M_PI * x) * sin(M_PI * y);
             double err = fabs(h_u[g->idx(i, j)] - u_exact);
             if (err > max_err) max_err = err;

@@ -8,7 +8,7 @@
 
 struct Grid2D {
     int nx, ny;            // intervalos em cada direção
-    double hx, hy;         // tamanho de cada intervalo
+    double h;              // tamanho de cada intervalo (h = L/n)
     double Lx, Ly;         // comprimento do domínio
     double* u;             // solucao aproximada em cada ponto
     double* u_new;         // buffer temporario para jacobi
@@ -19,7 +19,7 @@ struct Grid2D {
     // Construtor
     Grid2D(int nx, int ny, double Lx, double Ly)
         : nx(nx), ny(ny), Lx(Lx), Ly(Ly),
-          hx(Lx / nx), hy(Ly / ny),
+          h(Lx / nx),
           u(nullptr), u_new(nullptr), f(nullptr), r(nullptr), e(nullptr) {
         if (nx <= 0 || ny <= 0 || (nx & (nx - 1)) != 0 || (ny & (ny - 1)) != 0) {
             fprintf(stderr, "Erro: nx e ny devem ser potencias de 2 (recebido nx=%d, ny=%d)\n", nx, ny);

@@ -74,8 +74,8 @@ int main(int argc, char* argv[]) {
     std::vector<double> h_f(fine_size, 0.0);
     for (int i = 1; i < fine->nx; i++) {
         for (int j = 1; j < fine->ny; j++) {
-            double x = i * fine->hx;
-            double y = j * fine->hy;
+            double x = i * fine->h;
+            double y = j * fine->h;
             h_f[fine->idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
         }
     }
@@ -112,8 +112,8 @@ int main(int argc, char* argv[]) {
     double max_err = 0.0;
     for (int i = 1; i < fine->nx; i++) {
         for (int j = 1; j < fine->ny; j++) {
-            double x = i * fine->hx;
-            double y = j * fine->hy;
+            double x = i * fine->h;
+            double y = j * fine->h;
             double u_exact = sin(M_PI * x) * sin(M_PI * y);
             double err = fabs(h_u[fine->idx(i, j)] - u_exact);
             if (err > max_err) max_err = err;

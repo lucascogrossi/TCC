@@ -65,8 +65,8 @@ int main(int argc, char* argv[]) {
     // Solucao analitica: u(x,y) = sin(pi*x) * sin(pi*y)
     for (int i = 1; i < grid.nx; i++) {
         for (int j = 1; j < grid.ny; j++) {
-            double x = i * grid.hx;
-            double y = j * grid.hy;
+            double x = i * grid.h;
+            double y = j * grid.h;
             grid.f[grid.idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
         }
     }
@@ -89,8 +89,8 @@ int main(int argc, char* argv[]) {
     double max_err = 0.0;
     for (int i = 1; i < grid.nx; i++) {
         for (int j = 1; j < grid.ny; j++) {
-            double x = i * grid.hx;
-            double y = j * grid.hy;
+            double x = i * grid.h;
+            double y = j * grid.h;
             double u_exact = sin(M_PI * x) * sin(M_PI * y);
             double err = fabs(grid.u[grid.idx(i, j)] - u_exact);
             if (err > max_err)

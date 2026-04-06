@@ -8,15 +8,14 @@
 
 // pre alocar r no host
 __global__ void compute_residual_kernel(Grid2D grid, double* r) {
-    double hx2 = grid.hx * grid.hx;
-    double hy2 = grid.hy * grid.hy;
+    double h2 = grid.h * grid.h;
 
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (i >= 1 && i < grid.nx && j >= 1 && j < grid.ny) {
-            double Au_ij = (-grid.u[grid.idx(i-1,j)] + 2*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i+1,j)]) / hx2
-                         + (-grid.u[grid.idx(i,j-1)] + 2*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i,j+1)]) / hy2;
+            double Au_ij = (4*grid.u[grid.idx(i,j)] - grid.u[grid.idx(i-1,j)] - grid.u[grid.idx(i+1,j)]
+                           - grid.u[grid.idx(i,j-1)] - grid.u[grid.idx(i,j+1)]) / h2;
             r[grid.idx(i, j)] = grid.f[grid.idx(i, j)] - Au_ij;
     }
 }
@@ -70,7 +69,7 @@ __host__ double residual_norm_gpu(Grid2D* grid, double* d_result) {
 
     double h_result;
     CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(double), cudaMemcpyDeviceToHost));
-    return sqrt(h_result * grid->hx * grid->hy);
+    return sqrt(h_result * grid->h * grid->h);
 }
 
 // cada thread cuida de um ponto do grid grosso
