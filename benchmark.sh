@@ -9,8 +9,8 @@ SIZES=(64 128 256 512 1024 2048 4096)
 SMOOTHERS_CPU=(jacobi_amortecido gauss_seidel gauss_seidel_rb sor)
 SMOOTHERS_CUDA=(jacobi_amortecido gauss_seidel_rb)
 TOL=1e-8
-MAX_ITERS_SG=50000
-MAX_ITERS_MG=200
+MAX_ITERS_SG=100000
+MAX_ITERS_MG=100000
 HEADER="metodo,plataforma,n,smoother,iteracoes,erro,residuo,tempo_ms"
 
 # Binarios
