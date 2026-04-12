@@ -1,0 +1,2 @@
+metodo,plataforma,n,smoother,iteracoes,erro,residuo,tempo_ms
+sg,cuda,1024,jacobi_amortecido,100000,0.686262,6.77313,26382.4

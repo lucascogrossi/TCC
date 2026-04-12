@@ -1,0 +1,2 @@
+metodo,plataforma,n,smoother,iteracoes,erro,residuo,tempo_ms
+sg,cpu,256,jacobi_amortecido,100000,0.00240737,0.0238833,19203.4

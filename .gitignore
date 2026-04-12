@@ -7,6 +7,3 @@ multigrid/cuda/mg_cuda
 # Build artifacts
 *.o
 *.out
-
-# Ignore results
-results/

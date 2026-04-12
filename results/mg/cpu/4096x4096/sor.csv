@@ -1,0 +1,2 @@
+metodo,plataforma,n,smoother,iteracoes,erro,residuo,tempo_ms
+mg,cpu,4096,sor,8,4.89989e-08,7.25557e-09,7425.1
