@@ -4,11 +4,10 @@
 
 Equação de Poisson 2D com condições de contorno de Dirichlet em [0,1]x[0,1]:
 
-```v
--∇²u(x,y) = 2π²sin(πx)sin(πy)
-```
+-∇²u(x,y) = 2[(1-6x²)y²(1-y²) + (1-6y²)x²(1-x²)]
+Referência: Briggs, Henson & McCormick (2000), *A Multigrid Tutorial*, eq. (4.8).
 
-Solução analítica: `u(x,y) = sin(πx)sin(πy)`
+Solução analítica: `u(x,y) = (x²-x⁴)(y⁴-y²)`
 
 #### Build e execução
 
@@ -30,13 +29,13 @@ Executar individualmente:
 
 | Grid       | CPU (ms)  | CUDA (ms) | Speedup |
 |------------|-----------|-----------|---------|
-| 64x64      | 0.53      | 3.68      | 0.14x   |
-| 128x128    | 2.14      | 4.47      | 0.48x   |
-| 256x256    | 12.70     | 5.38      | 2.4x    |
-| 512x512    | 48.13     | 7.08      | 6.8x    |
-| 1024x1024  | 197.75    | 13.07     | 15.1x   |
-| 2048x2048  | 1151.60   | 40.02     | 28.8x   |
-| 4096x4096  | 5013.56   | 151.11    | 33.2x   |
+| 64x64      | -         | -         | -       |
+| 128x128    | -         | -         | -       |
+| 256x256    | -         | -         | -       |
+| 512x512    | -         | -         | -       |
+| 1024x1024  | -         | -         | -       |
+| 2048x2048  | -         | -         | -       |
+| 4096x4096  | -         | -         | -       |
 
 - Smoother: Gauss-Seidel Red-Black (2x pre & pos smoothing)
 - Tol: 1e-8

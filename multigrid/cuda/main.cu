@@ -67,8 +67,9 @@ int main(int argc, char* argv[]) {
     CUDA_CHECK(cudaMalloc(&d_result, sizeof(double)));
 
     // inicializa f no grid fino
-    // Equacao: -nabla^2 u(x,y) = 2*pi^2*sin(pi*x)*sin(pi*y)
-    // Solucao analitica: u(x,y) = sin(pi*x) * sin(pi*y)
+    // -∇²u(x,y) = 2[(1-6x²)y²(1-y²) + (1-6y²)x²(1-x²)]
+    // Solução analítica: u(x,y) = (x²-x⁴)(y⁴-y²)
+    // Referência: Briggs, Henson & McCormick (2000), *A Multigrid Tutorial*, eq. (4.8).
     Grid2D* fine = grids[0];
     int fine_size = (fine->nx+1) * (fine->ny+1);
     std::vector<double> h_f(fine_size, 0.0);
@@ -76,7 +77,7 @@ int main(int argc, char* argv[]) {
         for (int j = 1; j < fine->ny; j++) {
             double x = i * fine->h;
             double y = j * fine->h;
-            h_f[fine->idx(i, j)] = 2.0 * M_PI * M_PI * sin(M_PI * x) * sin(M_PI * y);
+            h_f[fine->idx(i, j)] = 2.0 * ((1.0 - 6.0*x*x) * y*y * (1.0 - y*y) + (1.0 - 6.0*y*y) * x*x * (1.0 - x*x));
         }
     }
     CUDA_CHECK(cudaMemcpy(fine->f, h_f.data(), fine_size * sizeof(double), cudaMemcpyHostToDevice));
@@ -114,7 +115,7 @@ int main(int argc, char* argv[]) {
         for (int j = 1; j < fine->ny; j++) {
             double x = i * fine->h;
             double y = j * fine->h;
-            double u_exact = sin(M_PI * x) * sin(M_PI * y);
+            double u_exact = (x*x - x*x*x*x) * (y*y*y*y - y*y);
             double err = fabs(h_u[fine->idx(i, j)] - u_exact);
             if (err > max_err) max_err = err;
         }
