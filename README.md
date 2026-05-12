@@ -4,7 +4,7 @@
 
 Equação de Poisson 2D com condições de contorno de Dirichlet em [0,1]x[0,1]:
 
--∇²u(x,y) = 2[(1-6x²)y²(1-y²) + (1-6y²)x²(1-x²)]
+`-∇²u(x,y) = 2[(1-6x²)y²(1-y²) + (1-6y²)x²(1-x²)]`
 Referência: Briggs, Henson & McCormick (2000), *A Multigrid Tutorial*, eq. (4.8).
 
 Solução analítica: `u(x,y) = (x²-x⁴)(y⁴-y²)`
