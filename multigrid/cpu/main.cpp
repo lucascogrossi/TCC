@@ -16,6 +16,8 @@ void print_usage() {
               << "Argumentos:\n"
               << "  n          Tamanho do grid (potencia de 2: 64, 128, 256, ...)\n"
               << "  smoother   jacobi | jacobi_amortecido | gauss_seidel | gauss_seidel_rb | sor\n"
+              << "             gauss_seidel_linha_x | gauss_seidel_linha_y\n"
+              << "             gauss_seidel_zebra_x | gauss_seidel_zebra_y\n"
               << "  tol        Tolerancia para convergencia (default: 1e-6)\n"
               << "  max_iters  Numero maximo de v-cycles (default: 100)\n"
               << "\n"
@@ -47,6 +49,14 @@ int main(int argc, char* argv[]) {
         smooth = gauss_seidel_rb;
     else if (smoother_name == "sor")
         smooth = sor;
+    else if (smoother_name == "gauss_seidel_linha_x")
+        smooth = gauss_seidel_linha_x;
+    else if (smoother_name == "gauss_seidel_linha_y")
+        smooth = gauss_seidel_linha_y;
+    else if (smoother_name == "gauss_seidel_zebra_x")
+        smooth = gauss_seidel_zebra_x;
+    else if (smoother_name == "gauss_seidel_zebra_y")
+        smooth = gauss_seidel_zebra_y;
     else {
         std::cerr << "Smoother invalido: " << smoother_name << "\n";
         return 1;
