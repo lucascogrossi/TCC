@@ -38,7 +38,7 @@ void v_cycle(Grid2D& grid, Smoother smooth) {
     correct(grid, e_fine);
 
     // 7. pos-suavizacao
-    for (int k = 0; k < 2; k++)
+    for (int k = 0; k < 1; k++)
         smooth(grid);
 }
 
