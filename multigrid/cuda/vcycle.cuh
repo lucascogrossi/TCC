@@ -56,7 +56,7 @@ __host__ void v_cycle(std::vector<Grid2D*>& grids, SmootherType smoother) {
         CUDA_CHECK(cudaDeviceSynchronize());
 
         // 8. Pos suavizacao
-        for (int k = 0; k < 2; k++)
+        for (int k = 0; k < 1; k++)
             smooth_grid(grids[i], smoother, numBlocks, numThreadsPerBlock);
     }
 }
