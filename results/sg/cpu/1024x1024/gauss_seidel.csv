@@ -1,2 +1,0 @@
-metodo,plataforma,n,smoother,iteracoes,erro,residuo,tempo_ms
-sg,cpu,1024,gauss_seidel,100000,0.390144,3.85059,535674
