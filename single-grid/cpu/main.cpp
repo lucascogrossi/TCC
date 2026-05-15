@@ -88,20 +88,32 @@ int main(int argc, char* argv[]) {
     double elapsed_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
 
     double max_err = 0.0;
+    double err_l2_tmp = 0.0;
+
     for (int i = 1; i < grid.nx; i++) {
         for (int j = 1; j < grid.ny; j++) {
             double x = i * grid.h;
             double y = j * grid.h;
             double u_exact = (x*x - x*x*x*x) * (y*y*y*y - y*y);
-            double err = fabs(grid.u[grid.idx(i, j)] - u_exact);
-            if (err > max_err)
-                max_err = err;
+            double diff = grid.u[grid.idx(i, j)] - u_exact;
+
+            // Erro norma infinita (máximo absoluto)
+            double err = fabs(diff);
+                if (err > max_err)
+                    max_err = err;
+
+            // Acumula quadrados para norma L2
+            err_l2_tmp += diff * diff;
         }
+
     }
+    // Norma L2 discreta
+    double err_l2 = sqrt(err_l2_tmp * grid.h * grid.h);
 
     std::cout << "\n=== Resultados ===\n"
               << "residuo final:  " << res << "\n"
-              << "erro maximo:    " << max_err << "\n"
+              << "erro L-inf:     " << max_err << "\n"
+              << "erro L2:        " << err_l2 << "\n"
               << "tempo total:    " << elapsed_ms << " ms\n";
 
     return 0;

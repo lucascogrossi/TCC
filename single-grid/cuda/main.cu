@@ -101,23 +101,36 @@ int main(int argc, char* argv[]) {
 
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    // calcula erro maximo contra solucao analitica
+    // calcula erro contra solucao analitica
     std::vector<double> h_u(grid_size);
     CUDA_CHECK(cudaMemcpy(h_u.data(), g->u, grid_size * sizeof(double), cudaMemcpyDeviceToHost));
     double max_err = 0.0;
+    double err_l2_tmp = 0.0;
+
     for (int i = 1; i < g->nx; i++) {
         for (int j = 1; j < g->ny; j++) {
             double x = i * g->h;
             double y = j * g->h;
             double u_exact = (x*x - x*x*x*x) * (y*y*y*y - y*y);
-            double err = fabs(h_u[g->idx(i, j)] - u_exact);
-            if (err > max_err) max_err = err;
+            double diff = h_u[g->idx(i, j)] - u_exact;
+
+            // Erro norma infinita (máximo absoluto)
+            double err = fabs(diff);
+                if (err > max_err)
+                    max_err = err;
+
+            // Acumula quadrados para norma L2
+            err_l2_tmp += diff * diff;
         }
+
     }
+    // Norma L2 discreta
+    double err_l2 = sqrt(err_l2_tmp * g->h * g->h);
 
     std::cout << "\n=== Resultados ===\n"
               << "residuo final:  " << res << "\n"
-              << "erro maximo:    " << max_err << "\n"
+              << "erro L-inf:     " << max_err << "\n"
+              << "erro L2:        " << err_l2 << "\n"
               << "tempo total:    " << elapsed_ms << " ms\n";
 
     // libera memoria
