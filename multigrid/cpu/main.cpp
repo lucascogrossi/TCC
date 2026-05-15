@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     double elapsed_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
 
     double max_err = 0.0;
-    double err_l2_sqrt = 0.0;
+    double err_l2_tmp = 0.0;
 
     for (int i = 1; i < grid.nx; i++) {
         for (int j = 1; j < grid.ny; j++) {
@@ -112,12 +112,12 @@ int main(int argc, char* argv[]) {
                     max_err = err;
 
             // Acumula quadrados para norma L2
-            err_l2_sqrt += diff * diff;
+            err_l2_tmp += diff * diff;
         }
 
     }
     // Norma L2 discreta
-    double err_l2 = sqrt(err_l2_sqrt * grid.h * grid.h);
+    double err_l2 = sqrt(err_l2_tmp * grid.h * grid.h);
 
     std::cout << "\n=== Resultados ===\n"
               << "residuo final:  " << res << "\n"
