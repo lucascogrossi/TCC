@@ -22,7 +22,7 @@ Executar individualmente:
 ```bash
 ./multigrid/cpu/mg_cpu <n> <smoother> [tol] [max_iters]
 ./multigrid/cuda/mg_cuda <n> <smoother> [tol] [max_iters]
-# exemplo: ./multigrid/cpu/mg_cuda 256 gauss_seidel_rb 1e-8 100
+# exemplo: ./multigrid/cuda/mg_cuda 256 gauss_seidel_rb 1e-8 100
 ```
 
 #### Resultados
@@ -37,7 +37,7 @@ Executar individualmente:
 | 2048x2048  | -         | -         | -       |
 | 4096x4096  | -         | -         | -       |
 
-- Smoother: Gauss-Seidel Red-Black (2x pre & pos smoothing)
+- Smoother: Gauss-Seidel Red-Black, V(2,1) (2 pre, 1 pos)
 - Tol: 1e-8
 - CPU: AMD Ryzen 7 5700X3D
 - GPU: NVIDIA GeForce RTX 5060
