@@ -5,10 +5,10 @@ set -e
 echo "Compilando..."
 make all
 
-SIZES=(64 128 256 512 1024 2048 4096)
+SIZES=(16 32 64 128 256 512 1024 2048 4096)
 SMOOTHERS_CPU=(jacobi_amortecido gauss_seidel gauss_seidel_rb sor)
 SMOOTHERS_CUDA=(jacobi_amortecido gauss_seidel_rb)
-TOL=1e-8
+TOL=1e-15
 MAX_ITERS_SG=100000
 MAX_ITERS_MG=100000
 HEADER="metodo,plataforma,n,smoother,iteracoes,erro,residuo,tempo_ms"
@@ -47,10 +47,10 @@ run_bench() {
     local output
     output=$("$bin" "$n" "$smoother" "$TOL" "$max_iters")
 
-    # Extrair historico de residuos
-    echo "iteracao,residuo" > "$resfile"
+    # Extrair historico de residuos (erro vazio quando o binario nao imprime)
+    echo "iteracao,residuo,erro" > "$resfile"
     echo "$output" | grep -E "^(iter|v-cycle) " \
-        | sed -E 's/^(iter|v-cycle) ([0-9]+)  residuo = (.+)/\2,\3/' >> "$resfile"
+        | sed -E 's/^(iter|v-cycle) ([0-9]+)  residuo = ([^ ]+)( +erro = ([^ ]+))?$/\2,\3,\5/' >> "$resfile"
 
     # Extrair resumo final
     local iters residuo erro tempo

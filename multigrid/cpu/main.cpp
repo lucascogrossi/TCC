@@ -81,14 +81,32 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    auto error_l2 = [](const Grid2D& g) {
+        double sum = 0.0;
+        for (int i = 1; i < g.nx; i++) {
+            for (int j = 1; j < g.ny; j++) {
+                double x = i * g.h;
+                double y = j * g.h;
+                double u_exact = (x*x - x*x*x*x) * (y*y*y*y - y*y);
+                double diff = g.u[g.idx(i, j)] - u_exact;
+                sum += diff * diff;
+            }
+        }
+        return sqrt(sum * g.h * g.h);
+    };
+
     auto t_start = std::chrono::high_resolution_clock::now();
+
+    std::cout << "v-cycle 0  residuo = " << residual_norm(grid)
+              << "  erro = " << error_l2(grid) << "\n";
 
     int k;
     double res = 0.0;
     for (k = 1; k <= max_vcycles; k++) {
         v_cycle(grid, smooth);
         res = residual_norm(grid);
-        std::cout << "v-cycle " << k << "  residuo = " << res << "\n";
+        std::cout << "v-cycle " << k << "  residuo = " << res
+                  << "  erro = " << error_l2(grid) << "\n";
         if (res < tol)
             break;
     }
@@ -121,7 +139,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\n=== Resultados ===\n"
               << "residuo final:  " << res << "\n"
-              << "erro L-inf:     " << max_err << "\n"
+              << "erro maximo:    " << max_err << "\n"
               << "erro L2:        " << err_l2 << "\n"
               << "tempo total:    " << elapsed_ms << " ms\n";
 
