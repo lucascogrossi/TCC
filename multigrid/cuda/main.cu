@@ -8,6 +8,50 @@
 #include "multigrid_utils.cuh"
 #include "vcycle.cuh"
 
+// Reduz (u - u_exact)^2 na GPU para a solucao analitica do problema modelo:
+// u_exact(x,y) = (x^2 - x^4)(y^4 - y^2)
+__global__ void error_l2_kernel(Grid2D grid, double* result) {
+    extern __shared__ double sdata[];
+
+    int j   = blockIdx.x * blockDim.x + threadIdx.x;
+    int i   = blockIdx.y * blockDim.y + threadIdx.y;
+    int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+    double val = 0.0;
+    if (i >= 1 && i < grid.nx && j >= 1 && j < grid.ny) {
+        double x = i * grid.h;
+        double y = j * grid.h;
+        double u_exact = (x*x - x*x*x*x) * (y*y*y*y - y*y);
+        double diff = grid.u[grid.idx(i, j)] - u_exact;
+        val = diff * diff;
+    }
+    sdata[tid] = val;
+    __syncthreads();
+
+    for (unsigned int stride = (blockDim.x * blockDim.y) / 2; stride > 0; stride >>= 1) {
+        if (tid < stride)
+            sdata[tid] += sdata[tid + stride];
+        __syncthreads();
+    }
+
+    if (tid == 0)
+        atomicAdd(result, sdata[0]);
+}
+
+__host__ double error_l2_gpu(Grid2D* grid, double* d_result) {
+    dim3 numThreadsPerBlock(16, 16);
+    dim3 numBlocks((grid->ny + numThreadsPerBlock.x - 1) / numThreadsPerBlock.x,
+                   (grid->nx + numThreadsPerBlock.y - 1) / numThreadsPerBlock.y);
+    int sharedMem = numThreadsPerBlock.x * numThreadsPerBlock.y * sizeof(double);
+
+    CUDA_CHECK(cudaMemset(d_result, 0, sizeof(double)));
+    error_l2_kernel<<<numBlocks, numThreadsPerBlock, sharedMem>>>(*grid, d_result);
+
+    double h_result;
+    CUDA_CHECK(cudaMemcpy(&h_result, d_result, sizeof(double), cudaMemcpyDeviceToHost));
+    return sqrt(h_result * grid->h * grid->h);
+}
+
 void print_usage() {
     std::cout << "Uso: ./multigrid_cuda <n> <smoother> [tol] [max_iters]\n"
               << "\n"
@@ -88,12 +132,16 @@ int main(int argc, char* argv[]) {
     CUDA_CHECK(cudaEventCreate(&stop));
     CUDA_CHECK(cudaEventRecord(start));
 
+    std::cout << "v-cycle 0  residuo = " << residual_norm_gpu(fine, d_result)
+              << "  erro = " << error_l2_gpu(fine, d_result) << "\n";
+
     int k;
     double res = 0.0;
     for (k = 1; k <= max_vcycles; k++) {
         v_cycle(grids, smoother);
         res = residual_norm_gpu(fine, d_result);
-        std::cout << "v-cycle " << k << "  residuo = " << res << "\n";
+        std::cout << "v-cycle " << k << "  residuo = " << res
+                  << "  erro = " << error_l2_gpu(fine, d_result) << "\n";
         if (res < tol)
             break;
     }
